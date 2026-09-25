@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Έλεγχος ψηφιακής ταυτότητας</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ink: #16181d;
+  --ink-soft: #565a63;
+  --ink-faint: #8b8f98;
+  --paper: #ffffff;
+  --field: #eceae5;
+  --rule: #d5d2ca;
+  --accent: #2a4a7b;
+  --flag: #8c2f2f;
+  --flag-bg: #f7ecec;
+  --ok: #3d6b4a;
+  --ok-bg: #edf3ee;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--field);
+  color: var(--ink);
+  font: 400 16px/1.6 "IBM Plex Sans", system-ui, sans-serif;
+  padding: 40px 20px 80px;
+}
+
+.shell { max-width: 720px; margin: 0 auto; }
+
+h1 {
+  font-size: 28px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  margin: 0 0 8px;
+}
+
+.standfirst {
+  color: var(--ink-soft);
+  margin: 0 0 32px;
+  max-width: 54ch;
+}
+
+.panel {
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  padding: 28px;
+}
+
+/* --- drop zone --- */
+.drop {
+  border: 1.5px dashed var(--rule);
+  padding: 44px 24px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color .15s, background .15s;
+}
+.drop:hover, .drop.over { border-color: var(--accent); background: #f6f8fb; }
+.drop:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.drop p { margin: 0; color: var(--ink-soft); }
+.drop strong { color: var(--ink); font-weight: 500; }
+.drop small { display: block; margin-top: 8px; color: var(--ink-faint); font-size: 13px; }
+
+.preview { display: none; align-items: center; gap: 18px; }
+.preview.on { display: flex; }
+.preview img {
+  width: 96px; height: 96px; object-fit: cover;
+  border: 1px solid var(--rule);
+}
+.preview .meta { flex: 1; min-width: 0; }
+.preview .name {
+  font-weight: 500; overflow: hidden;
+  text-overflow: ellipsis; white-space: nowrap;
+}
+.preview .size { color: var(--ink-faint); font-size: 14px; }
+
+button {
+  font: 500 15px "IBM Plex Sans", sans-serif;
+  padding: 11px 22px;
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: #fff;
+  cursor: pointer;
+  transition: background .15s;
+}
+button:hover:not(:disabled) { background: #1f3a63; }
+button:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+button:disabled { opacity: .45; cursor: not-allowed; }
+button.quiet {
+  background: transparent; color: var(--ink-soft); border-color: var(--rule);
+}
+button.quiet:hover:not(:disabled) { background: var(--field); }
+
+.actions { display: flex; gap: 10px; margin-top: 22px; }
+
+/* --- notices --- */
+.notice {
+  border-left: 3px solid var(--flag);
+  background: var(--flag-bg);
+  color: var(--flag);
+  padding: 12px 16px;
+  margin-bottom: 20px;
+  font-size: 14.5px;
+}
+.notice.warn { border-color: #9a6510; background: #faf2e4; color: #7a5210; }
+
+/* --- progress --- */
+.progress { display: none; margin-top: 24px; }
+.progress.on { display: block; }
+.progress ol { list-style: none; margin: 0; padding: 0; }
+.progress li {
+  padding: 9px 0 9px 26px;
+  color: var(--ink-faint);
+  border-bottom: 1px solid var(--field);
+  position: relative;
+  font-size: 15px;
+}
+.progress li::before {
+  content: "○"; position: absolute; left: 0; top: 9px;
+}
+.progress li.active { color: var(--ink); }
+.progress li.active::before { content: "◑"; color: var(--accent); }
+.progress li.done { color: var(--ink-soft); }
+.progress li.done::before { content: "●"; color: var(--accent); }
+
+/* --- summary --- */
+.summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 1px;
+  background: var(--rule);
+  border: 1px solid var(--rule);
+  margin: 28px 0;
+}
+.stat { background: var(--paper); padding: 16px 18px; }
+.stat .n {
+  font: 500 26px "IBM Plex Mono", monospace;
+  display: block; line-height: 1.2;
+}
+.stat .k { font-size: 13px; color: var(--ink-soft); }
+.stat.alert .n { color: var(--flag); }
+
+/* --- findings --- */
+h2 { font-size: 19px; font-weight: 600; margin: 32px 0 4px; }
+.count { color: var(--ink-faint); font-size: 14.5px; margin: 0 0 16px; }
+
+.finding {
+  display: flex; gap: 16px;
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  border-left-width: 3px;
+  padding: 16px;
+  margin-bottom: 10px;
+}
+.finding.fake { border-left-color: var(--flag); }
+.finding.real { border-left-color: var(--ok); }
+.finding img {
+  width: 84px; height: 84px; object-fit: cover;
+  border: 1px solid var(--rule); flex-shrink: 0; background: var(--field);
+}
+.finding .body { flex: 1; min-width: 0; }
+.finding .src {
+  font-weight: 500; display: block; color: var(--accent);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.finding .title {
+  color: var(--ink-soft); font-size: 14px; margin: 2px 0 10px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.chip {
+  font-size: 13px; padding: 3px 9px; border: 1px solid var(--rule);
+}
+.chip.fake { background: var(--flag-bg); color: var(--flag); border-color: #dbbcbc; }
+.chip.real { background: var(--ok-bg); color: var(--ok); border-color: #bcd0c1; }
+.num { font-family: "IBM Plex Mono", monospace; font-size: 13px; color: var(--ink-soft); }
+
+.empty {
+  background: var(--paper); border: 1px solid var(--rule);
+  padding: 36px 28px; text-align: center; color: var(--ink-soft);
+}
+
+footer {
+  margin-top: 40px; padding-top: 20px;
+  border-top: 1px solid var(--rule);
+  font-size: 13.5px; color: var(--ink-faint);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; }
+}
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <h1>Έλεγχος ψηφιακής ταυτότητας</h1>
+  <p class="standfirst">
+    Ανέβασε μία φωτογραφία σου. Το σύστημα ψάχνει δημόσια προσβάσιμες πηγές
+    για εικόνες με το ίδιο πρόσωπο και ελέγχει αν κάποια από αυτές φέρει
+    ίχνη ψηφιακής αλλοίωσης.
+  </p>
+
+  <div id="notices"></div>
+
+  <div class="panel">
+    <div class="drop" id="drop" tabindex="0" role="button"
+         aria-label="Επιλογή φωτογραφίας">
+      <p><strong>Σύρε μια φωτογραφία εδώ</strong> ή πάτα για επιλογή</p>
+      <small>JPEG, PNG ή WebP · ένα πρόσωπο, έως 10 MB</small>
+    </div>
+
+    <div class="preview" id="preview">
+      <img id="thumb" alt="Η φωτογραφία που επέλεξες">
+      <div class="meta">
+        <span class="name" id="fname"></span>
+        <span class="size" id="fsize"></span>
+      </div>
+    </div>
+
+    <input type="file" id="picker" accept="image/jpeg,image/png,image/webp" hidden>
+
+    <div class="actions">
+      <button id="go" disabled>Έναρξη ελέγχου</button>
+      <button id="reset" class="quiet" hidden>Νέος έλεγχος</button>
+    </div>
+
+    <div class="progress" id="progress">
+      <ol>
+        <li data-step="0">Ανάλυση της φωτογραφίας σου</li>
+        <li data-step="1">Αναζήτηση σε μηχανές εικόνας</li>
+        <li data-step="2">Επαλήθευση προσώπου στα ευρήματα</li>
+        <li data-step="3">Έλεγχος για ψηφιακή αλλοίωση</li>
+      </ol>
+    </div>
+  </div>
+
+  <div id="results"></div>
+
+  <footer>
+    Ο έλεγχος καλύπτει μόνο περιεχόμενο που είναι δημόσια ευρετηριασμένο από
+    τις μηχανές αναζήτησης. Δεν καλύπτει ιδιωτικά προφίλ ούτε εγγυάται
+    πλήρη κάλυψη. Η ένδειξη αλλοίωσης είναι βοηθητική, όχι απόδειξη.
+  </footer>
+
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+let chosen = null;
+let timers = [];
+
+function notice(text, kind) {
+  const div = document.createElement("div");
+  div.className = "notice" + (kind ? " " + kind : "");
+  div.textContent = text;
+  $("notices").appendChild(div);
+}
+
+// Proelegxos: einai ola etoima?
+fetch("/api/status").then(r => r.json()).then(s => {
+  if (!s.serpapi_configured) {
+    notice("Λείπει το κλειδί SERPAPI_KEY. Πρόσθεσέ το στο αρχείο .env και ξεκίνα ξανά τον server.");
+  }
+  if (!s.deepsafe_available) {
+    notice("Το DeepSafe δεν απαντά. Η αναζήτηση θα δουλέψει, αλλά χωρίς έλεγχο αλλοίωσης.", "warn");
+  }
+}).catch(() => {});
+
+// --- epilogi arxeiou ---
+function accept(file) {
+  if (!file) return;
+  if (!file.type.startsWith("image/")) {
+    notice("Δεκτά είναι μόνο αρχεία εικόνας.");
+    return;
+  }
+  chosen = file;
+  $("thumb").src = URL.createObjectURL(file);
+  $("fname").textContent = file.name;
+  $("fsize").textContent = (file.size / 1024).toFixed(0) + " KB";
+  $("drop").hidden = true;
+  $("preview").classList.add("on");
+  $("go").disabled = false;
+}
+
+$("drop").onclick = () => $("picker").click();
+$("drop").onkeydown = e => {
+  if (e.key === "Enter" || e.key === " ") { e.preventDefault(); $("picker").click(); }
+};
+$("picker").onchange = e => accept(e.target.files[0]);
+
+["dragenter", "dragover"].forEach(ev =>
+  $("drop").addEventListener(ev, e => {
+    e.preventDefault(); $("drop").classList.add("over");
+  }));
+["dragleave", "drop"].forEach(ev =>
+  $("drop").addEventListener(ev, e => {
+    e.preventDefault(); $("drop").classList.remove("over");
+  }));
+$("drop").addEventListener("drop", e => accept(e.dataTransfer.files[0]));
+
+// --- vimata proodou ---
+function stepTo(n) {
+  document.querySelectorAll("#progress li").forEach(li => {
+    const s = +li.dataset.step;
+    li.className = s < n ? "done" : s === n ? "active" : "";
+  });
+}
+
+function fakeProgress() {
+  // Den exoume pragmatiko streaming apo ton server, opote deixnoume
+  // ta vimata me ektimomeni diarkeia gia na min fainetai kollimeno.
+  stepTo(0);
+  timers = [
+    setTimeout(() => stepTo(1), 1500),
+    setTimeout(() => stepTo(2), 12000),
+    setTimeout(() => stepTo(3), 25000),
+  ];
+}
+
+// --- ektelesi ---
+$("go").onclick = async () => {
+  $("notices").innerHTML = "";
+  $("results").innerHTML = "";
+  $("go").disabled = true;
+  $("progress").classList.add("on");
+  fakeProgress();
+
+  const form = new FormData();
+  form.append("file", chosen);
+
+  try {
+    const res = await fetch("/api/analyse", { method: "POST", body: form });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || "Ο έλεγχος απέτυχε.");
+    render(data);
+  } catch (err) {
+    notice(err.message);
+  } finally {
+    timers.forEach(clearTimeout);
+    $("progress").classList.remove("on");
+    $("reset").hidden = false;
+  }
+};
+
+$("reset").onclick = () => location.reload();
+
+// --- anafora ---
+function host(url) {
+  try { return new URL(url).hostname.replace(/^www\./, ""); }
+  catch { return "άγνωστη πηγή"; }
+}
+
+function render(data) {
+  const s = data.statistics;
+  const f = data.findings;
+
+  const stats = [
+    ["Ευρήματα αναζήτησης", s.found_by_search, false],
+    ["Ίδιο πρόσωπο", s.face_matches, false],
+    ["Πιθανώς αλλοιωμένες", s.flagged_synthetic, s.flagged_synthetic > 0],
+  ].map(([k, n, alert]) => `
+    <div class="stat${alert ? " alert" : ""}">
+      <span class="n">${n}</span><span class="k">${k}</span>
+    </div>`).join("");
+
+  let html = `<div class="summary">${stats}</div>`;
+
+  if (!f.length) {
+    html += `<div class="empty">
+      Δεν βρέθηκε καμία δημόσια εικόνα με το πρόσωπό σου στις πηγές
+      που ελέγχθηκαν. Ο έλεγχος διήρκεσε ${data.duration_seconds} δευτερόλεπτα.
+    </div>`;
+    $("results").innerHTML = html;
+    return;
+  }
+
+  html += `<h2>Ευρήματα</h2>
+    <p class="count">${f.length} εικόνες με το ίδιο πρόσωπο ·
+     ολοκληρώθηκε σε ${data.duration_seconds} δευτερόλεπτα</p>`;
+
+  html += f.map(hit => {
+    const fake = hit.deepfake_verdict === "fake";
+    const real = hit.deepfake_verdict === "real";
+    const chip = fake
+      ? `<span class="chip fake">Πιθανή αλλοίωση</span>`
+      : real
+        ? `<span class="chip real">Δεν εντοπίστηκε αλλοίωση</span>`
+        : `<span class="chip">Χωρίς έλεγχο αλλοίωσης</span>`;
+
+    const conf = hit.deepfake_confidence != null
+      ? `<span class="num">βεβαιότητα ${(hit.deepfake_confidence * 100).toFixed(0)}%</span>` : "";
+
+    const link = hit.source_url || hit.image_url;
+
+    return `<article class="finding ${fake ? "fake" : real ? "real" : ""}">
+      <img src="${hit.image_url}" alt="" loading="lazy">
+      <div class="body">
+        <a class="src" href="${link}" target="_blank" rel="noopener noreferrer">${host(link)}</a>
+        <div class="title">${hit.title || "Χωρίς τίτλο"}</div>
+        <div class="row">
+          ${chip}
+          ${conf}
+          <span class="num">ομοιότητα ${hit.similarity_percent}%</span>
+          <span class="num">d=${hit.face_distance}</span>
+        </div>
+      </div>
+    </article>`;
+  }).join("");
+
+  $("results").innerHTML = html;
+}
+</script>
+</body>
+</html>
