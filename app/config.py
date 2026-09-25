@@ -1,5 +1,5 @@
 """
-Ryhmiseis tou systimatos.
+Ryhmiseis tou systimatos efarmoghs.
 
 Oles oi times diavazontai apo to arxeio .env wste na min yparxoun
 kleidia (API keys) mesa ston kodika.
