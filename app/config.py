@@ -18,9 +18,7 @@ SERPAPI_BASE = "https://serpapi.com/search"
 SERPAPI_UPLOAD = "https://serpapi.com/image"
 
 # Poies mhxanes anazhtishs tha xrisimopoihthoun.
-# !!!!!To yandex einai simantiko giati einai i mono pou kanei ontos face matching.
-#!!!! to yandex dexetai moino urls opote xreiazetai temp link (ngrok) gia na ginei upload h eikona. 
-SEARCH_ENGINES = ["google_lens", "yandex_images"]
+SEARCH_ENGINES = ["google_lens"]
 
 # Posa apotelesmata epistrefei kathe mhxanh.
 MAX_RESULTS_PER_ENGINE = 20
