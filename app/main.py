@@ -29,6 +29,7 @@ app = FastAPI(title="Identity Guard")
 STATIC_DIR = Path(__file__).parent / "static"
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
+
 ALLOWED_TYPES = {"image/jpeg", "image/png", "image/webp"}
 MAX_UPLOAD_BYTES = 10 * 1024 * 1024  # 10 MB
 
@@ -78,7 +79,6 @@ async def analyse(file: UploadFile = File(...)) -> dict:
     except face_matcher.MultipleFacesError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except RuntimeError as exc:
-        # px leipei to SERPAPI_KEY
         raise HTTPException(status_code=503, detail=str(exc)) from exc
     except Exception as exc:
         logger.exception("Aprosmeno sfalma sthn analysh")
@@ -86,3 +86,4 @@ async def analyse(file: UploadFile = File(...)) -> dict:
             status_code=500,
             detail="H analysh apetyxe. Des ta logs tou server.",
         ) from exc
+    

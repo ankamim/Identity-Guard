@@ -1,24 +1,27 @@
 @echo off
-REM Xekinaei to DeepSafe (Docker) kai meta tin diki mas efarmogi.
+REM Xekinaei to DeepSafe (Docker), to ngrok kai tin efarmogi Identity Guard.
 REM An allakses ta paths sou, allakse tis diadromes edw katw.
+
 
 echo ============================================
 echo   Ekkinisi DeepSafe containers...
 echo ============================================
 cd /d C:\Users\kamil\Desktop\DeepSafe
-docker compose up -d api npr_deepfakedetection
+docker compose up -d api npr_deepfakedetection universalfakedetect
 
 echo.
 echo Perimeno 5 defterolepta gia na stathertopoiithoun ta containers...
 timeout /t 5 /nobreak >nul
 
+
+:start_app
 echo.
 echo ============================================
 echo   Ekkinisi tis efarmogis (Identity Guard)...
 echo ============================================
 cd /d C:\Users\kamil\Desktop\ptyxiakh
 
-REM Anoigei ton browser meta apo 4 defterolepta, oso o serverakoma xekinaei
+REM Anoigei ton browser meta apo 4 defterolepta, oso o server akoma xekinaei
 start "" cmd /c "timeout /t 4 /nobreak >nul && start http://localhost:8080"
 
 call venv311\Scripts\activate

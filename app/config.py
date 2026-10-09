@@ -21,14 +21,14 @@ SERPAPI_UPLOAD = "https://serpapi.com/image"
 SEARCH_ENGINES = ["google_lens"]
 
 # Posa apotelesmata epistrefei kathe mhxanh.
-MAX_RESULTS_PER_ENGINE = 20
+MAX_RESULTS_PER_ENGINE = 40
 
 
 # --- Face matching ---------------------------------------------------------
 
 # Katwfli omoiotitas prosopou (cosine distance, DeepFace/VGG-Face).
 # Oso poio mikrh apostash toso poio omoiomorfo to prwsopo,typiki timi gia VGG-Face: ~0.40.
-FACE_DISTANCE_THRESHOLD = 0.40
+FACE_DISTANCE_THRESHOLD = 0.45
 
 # Megisto megethos pixels eikonas prin to face encoding, gia taxytita.
 MAX_IMAGE_DIMENSION = 1024
@@ -46,7 +46,7 @@ DEEPSAFE_ENSEMBLE = os.getenv("DEEPSAFE_ENSEMBLE", "voting")
 # --- Genika ----------------------------------------------------------------
 
 # Timeout se deuterolepta gia ta exwterika API.
-HTTP_TIMEOUT = 60.0
+HTTP_TIMEOUT = 240.0
 
 # Posa apotelesmata na katevainoun parallila.
 DOWNLOAD_CONCURRENCY = 5

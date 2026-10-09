@@ -20,12 +20,17 @@ logger = logging.getLogger(__name__)
  
 @dataclass
 class SearchHit:
-    """Ena apotelesma apo tin antistrofi anazitisi."""
+    """Ena apotelesma apo tin antistrofi anazhtisi."""
  
     image_url: str
     source_url: str = ""
     title: str = ""
     engine: str = ""
+    #Plhroforia gia thn eikona meta to download (width, height, bytes)
+    image_kind: str = "original"   # "original" | "thumbnail"
+    img_width: int | None = None
+    img_height: int | None = None
+    img_bytes: int | None = None
     # Gemizei argotera apo to face_matcher / deepfake_client
     face_distance: float | None = None
     is_face_match: bool = False
@@ -33,6 +38,7 @@ class SearchHit:
     deepfake_confidence: float | None = None
     model_results: dict = field(default_factory=dict)
     error: str | None = None
+    
  
  
 async def upload_image(client: httpx.AsyncClient, image_bytes: bytes,
@@ -42,9 +48,6 @@ async def upload_image(client: httpx.AsyncClient, image_bytes: bytes,
  
     To image_id xrisimopoieitai meta ws parametros sto Google Lens search,
     wste na min xreiazetai i eikona na einai idi dimosia sto internet.
- 
-    To SerpApi exei orio 500KB gia to arxeio, opote an i eikona einai
-    megalyteri tin sympiezoume prota.
     """
     image_bytes = _ensure_under_limit(image_bytes)
  
@@ -86,7 +89,19 @@ def _ensure_under_limit(image_bytes: bytes, limit: int = 480_000) -> bytes:
     image.save(buffer, format="JPEG", quality=70)
     return buffer.getvalue()
  
- 
+
+def _as_url(value) -> str | None:
+    """To SerpApi merikes fores epistrefei antikeimeno anti gia string."""
+    if isinstance(value, str):
+        return value
+    if isinstance(value, dict):
+        for key in ("link", "url", "src", "original", "thumbnail"):
+            candidate = value.get(key)
+            if isinstance(candidate, str):
+                return candidate
+        logger.warning("Agnwsto sxhma URL eikonas: %s", str(value)[:200])
+    return None
+
 def _parse_google_lens(payload: dict) -> list[SearchHit]:
     """Vgazei ta apotelesmata apo tin apantisi tou Google Lens."""
     hits: list[SearchHit] = []
@@ -94,7 +109,9 @@ def _parse_google_lens(payload: dict) -> list[SearchHit]:
     # "exact_matches" -> tautosimes/scheddon-tautosimes eikones (type=exact_matches)
     for key in ("visual_matches", "exact_matches"):
         for item in payload.get(key, []) or []:
-            image_url = item.get("thumbnail") or item.get("image")
+            image_url = (_as_url(item.get("original") or item.get("image") or item.get("thumbnail"))
+                         or _as_url(item.get("image"))
+                         or _as_url(item.get("thumbnail")))
             if not image_url:
                 continue
             hits.append(SearchHit(
@@ -113,9 +130,9 @@ def _parse_yandex(payload: dict) -> list[SearchHit]:
     # opote elegxoume ola ta pithana.
     for key in ("image_results", "similar_images", "organic_results"):
         for item in payload.get(key, []) or []:
-            image_url = (item.get("original")
-                         or item.get("thumbnail")
-                         or item.get("image"))
+            image_url = (_as_url(item.get("original"))
+                         or _as_url(item.get("image"))
+                         or _as_url(item.get("thumbnail")))
             if not image_url:
                 continue
             hits.append(SearchHit(
@@ -152,7 +169,8 @@ async def _search_one_engine(client: httpx.AsyncClient, engine: str,
         hits = _parse_google_lens(payload)
     else:
         hits = _parse_yandex(payload)
- 
+
+    logger.info("Apotelesmata prin to orio: %d", len(hits))
     return hits[:config.MAX_RESULTS_PER_ENGINE]
  
  
@@ -186,10 +204,43 @@ async def _search_exact_matches(client: httpx.AsyncClient,
         return []
  
     hits = _parse_google_lens(payload)
+    
+    logger.info("Apotelesmata exact_matches: %d", len(hits))
+    return hits[:config.MAX_RESULTS_PER_ENGINE]
+
+async def _search_yandex_by_url(client: httpx.AsyncClient,
+                                public_image_url: str) -> list[SearchHit]:
+    """
+    Anazhtish Yandex mesw dimosiou URL tis eikonas.
+ 
+    To Yandex sto SerpApi DEN dexetai image_id (upload) opos to Google Lens -
+    thelei mono "url" parametro me idi dimosia prosvasimi eikona.
+    """
+    params = {
+        "engine": "yandex_images",
+        "api_key": config.SERPAPI_KEY,
+        "url": public_image_url,
+    }
+ 
+    try:
+        response = await client.get(config.SERPAPI_BASE, params=params)
+        response.raise_for_status()
+        payload = response.json()
+    except Exception as exc:
+        logger.warning("Apotyxia anazitisis sto yandex (url): %s", exc)
+        return []
+ 
+    if payload.get("error"):
+        logger.warning("To yandex epestrepse sfalma: %s", payload["error"])
+        return []
+ 
+    hits = _parse_yandex(payload)
+    
+    logger.info("Apotelesmata yandex: %d", len(hits))
     return hits[:config.MAX_RESULTS_PER_ENGINE]
  
  
-async def search(image_bytes: bytes, filename: str = "query.jpg") -> list[SearchHit]:
+async def search(image_bytes: bytes, filename: str = "query.jpg", public_image_url: str | None = None) -> list[SearchHit]:
     """
     Kyria synartisi tou module.
  
@@ -211,9 +262,12 @@ async def search(image_bytes: bytes, filename: str = "query.jpg") -> list[Search
         ]
         if "google_lens" in config.SEARCH_ENGINES:
             tasks.append(_search_exact_matches(client, image_id))
+        if public_image_url:
+            tasks.append(_search_yandex_by_url(client, public_image_url))
         results = await asyncio.gather(*tasks)
+        logger.info("Apotelesmata ana anazhthsh: %s", [len(r) for r in results])
  
-    # Enopoiisi kai afairesi diplotypon me vasi to URL
+    # Enopoihsh kai afairesh diplotypon me vasi to URL
     all_hits: list[SearchHit] = []
     seen: set[str] = set()
     for engine_hits in results:
