@@ -134,12 +134,17 @@ def _parse_yandex(payload: dict) -> list[SearchHit]:
     # opote elegxoume ola ta pithana.
     for key in ("image_results", "similar_images", "organic_results"):
         for item in payload.get(key, []) or []:
-            image_url = (_as_url(item.get("original"))
+            # Sta image_results h megalh eikona einai sto "original_image".
+            # Xwris afto pairname mono th mikrografia twn ~180px.
+            original = (_as_url(item.get("original_image"))
+                        or _as_url(item.get("original")))
+            image_url = (original
                          or _as_url(item.get("image"))
                          or _as_url(item.get("thumbnail")))
             if not image_url:
                 continue
-            has_original = _as_url(item.get("original")) or _as_url(item.get("image"))
+            # To "image" twn similar_images einai ki afto mikrografia
+            has_original = original
             hits.append(SearchHit(
                 image_url=image_url,
                 source_url=item.get("link", "") or item.get("source", ""),
