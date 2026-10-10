@@ -95,6 +95,11 @@ async def run(image_bytes: bytes, filename: str,
     if confirmed:
         to_analyse = {}
         for hit in confirmed:
+            # Oi mikrografies tou Yandex (similar_images) einai sympiesmenes
+            # kai edwsan lathos "fake" se pragmatikes fwtografies, opote
+            # den tis elegxoume. Ta exact_matches tou Lens ta kratame.
+            if hit.engine == "yandex" and hit.image_kind == "thumbnail":
+                continue
             image_data = downloaded[hit.image_url]
             face = face_matcher.crop_face(query_encoding, image_data)
             to_analyse[hit.image_url] = face or image_data
