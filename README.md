@@ -87,6 +87,7 @@ uvicorn app.main:app --reload --port 8080
 | `MAX_RESULTS_PER_ENGINE` | Πόσα αποτελέσματα ανά μηχανή — προσοχή, κάθε αναζήτηση καίει quota |
 | `DEEPSAFE_ENSEMBLE` | `voting`, `average` (προεπιλογή) ή `stacking` |
 | `DEEPSAFE_MODELS` | Ποια μοντέλα του DeepSafe καλούνται. Μόνο το `universalfakedetect`, το `npr_deepfakedetection` έδινε 0.0 σε όλες τις εικόνες. |
+| `DEEPSAFE_THRESHOLD` | Από ποια πιθανότητα και πάνω μια εικόνα θεωρείται αλλοιωμένη. Μικρότερο = πιάνει περισσότερα deepfakes αλλά δίνει και περισσότερους λάθος συναγερμούς. |
 | `FACE_CROP_MARGIN`, `FACE_CROP_SIZE` | Περιθώριο και μέγεθος του κομμένου προσώπου που στέλνεται στο DeepSafe |
 
 Το `FACE_DISTANCE_THRESHOLD` είναι το πιο ενδιαφέρον για την πτυχιακή: τρέξε

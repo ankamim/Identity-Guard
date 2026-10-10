@@ -54,6 +54,11 @@ DEEPSAFE_ENSEMBLE = os.getenv("DEEPSAFE_ENSEMBLE", "average")
 # 0.0 se oles tis eikones tou test set, opote to vgalame apo thn psifoforia.
 DEEPSAFE_MODELS = ["universalfakedetect"]
 
+# Apo poia pithanotita kai panw mia eikona theoreitai "fake". To default tou
+# DeepSafe (0.5) epiane mono ~51% twn face swaps. Me 0.06, se 200 nees eikones
+# tou DeepFakeFace, pianei ~80% me ~16% lathos synagermous se pragmatikes.
+DEEPSAFE_THRESHOLD = 0.06
+
 
 # --- Genika ----------------------------------------------------------------
 
