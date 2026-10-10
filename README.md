@@ -60,6 +60,14 @@ make start
 
 Πιάνει το port 8000. Έλεγξε ότι δουλεύει: http://localhost:8000/docs
 
+**Προσοχή:** η τρέχουσα έκδοση του DeepSafe δεν εγκαθιστά το OpenCV στο
+`universalfakedetect` και το container κάνει συνέχεια restart
+(`No module named 'cv2'`). Πριν το `make start`, πρόσθεσε τη γραμμή
+`opencv-python-headless==4.11.0.86` στο
+`models/image/universalfakedetect/requirements.txt`. Η εφαρμογή χρησιμοποιεί
+μόνο το `universalfakedetect`, οπότε αρκεί και
+`docker compose up -d --build api universalfakedetect` (χωρίς `make`).
+
 ### 4. Εκκίνηση
 
 ```bash
@@ -77,10 +85,12 @@ uvicorn app.main:app --reload --port 8080
 | `FACE_DISTANCE_THRESHOLD` | Πόσο κοντά πρέπει να είναι δύο πρόσωπα για match. Μικρότερο = αυστηρότερο, λιγότερα false positives αλλά και λιγότερα σωστά ευρήματα. |
 | `SEARCH_ENGINES` | Ποιες μηχανές χρησιμοποιούνται |
 | `MAX_RESULTS_PER_ENGINE` | Πόσα αποτελέσματα ανά μηχανή — προσοχή, κάθε αναζήτηση καίει quota |
-| `DEEPSAFE_ENSEMBLE` | `voting`, `average` ή `stacking` |
+| `DEEPSAFE_ENSEMBLE` | `voting`, `average` (προεπιλογή) ή `stacking` |
+| `DEEPSAFE_MODELS` | Ποια μοντέλα του DeepSafe καλούνται. Μόνο το `universalfakedetect`, το `npr_deepfakedetection` έδινε 0.0 σε όλες τις εικόνες. |
+| `FACE_CROP_MARGIN`, `FACE_CROP_SIZE` | Περιθώριο και μέγεθος του κομμένου προσώπου που στέλνεται στο DeepSafe |
 
 Το `FACE_DISTANCE_THRESHOLD` είναι το πιο ενδιαφέρον για την πτυχιακή: τρέξε
-την αξιολόγηση με διάφορες τιμές (0.45, 0.5, 0.55, 0.6) και φτιάξε καμπύλη
+την αξιολόγηση με διάφορες τιμές (0.50, 0.55, 0.60, 0.65) και φτιάξε καμπύλη
 precision/recall. Αυτό είναι ένα ολόκληρο υποκεφάλαιο αποτελεσμάτων.
 
 ## Περιορισμοί προς αναφορά στην εργασία
