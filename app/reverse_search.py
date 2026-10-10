@@ -311,7 +311,11 @@ async def download_images(hits: list[SearchHit]) -> dict[str, bytes]:
             except Exception as exc:
                 hit.error = f"Apotyxia katevasmatos: {exc}"
  
-    async with httpx.AsyncClient(timeout=30.0) as client:
+    # Polla sites apantoun 403 an to aitima den moiazei me browser.
+    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                             "AppleWebKit/537.36 (KHTML, like Gecko) "
+                             "Chrome/126.0 Safari/537.36"}
+    async with httpx.AsyncClient(timeout=30.0, headers=headers) as client:
         await asyncio.gather(*(fetch(client, hit) for hit in hits))
  
     logger.info("Katevikan %d apo %d eikones", len(downloaded), len(hits))
