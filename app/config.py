@@ -34,6 +34,11 @@ FACE_DISTANCE_THRESHOLD = 0.60
 # Megisto megethos pixels eikonas prin to face encoding, gia taxytita.
 MAX_IMAGE_DIMENSION = 1024
 
+# Perithwrio gyrw apo to proswpo (0.3 = 30%) kai megethos tou crop
+# pou stelnetai sto DeepSafe.
+FACE_CROP_MARGIN = 0.3
+FACE_CROP_SIZE = 256
+
 
 # --- Deepfake detection (DeepSafe) -----------------------------------------
 
@@ -41,7 +46,13 @@ MAX_IMAGE_DIMENSION = 1024
 DEEPSAFE_URL = os.getenv("DEEPSAFE_URL", "http://localhost:8000")
 
 # voting, average, stacking
-DEEPSAFE_ENSEMBLE = os.getenv("DEEPSAFE_ENSEMBLE", "voting")
+# Me ena montelo to average dinei thn pithanotita tou idiou tou montelou,
+# enw to voting edine panta 0 h 1.
+DEEPSAFE_ENSEMBLE = os.getenv("DEEPSAFE_ENSEMBLE", "average")
+
+# Poia montela tou DeepSafe xrisimopoioume. To npr_deepfakedetection edine
+# 0.0 se oles tis eikones tou test set, opote to vgalame apo thn psifoforia.
+DEEPSAFE_MODELS = ["universalfakedetect"]
 
 
 # --- Genika ----------------------------------------------------------------

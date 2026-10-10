@@ -91,11 +91,13 @@ async def run(image_bytes: bytes, filename: str,
 
     # --- Stadio 5: deepfake detection ------------------------------------
     # Trexei mono panw sta epivevaiomena matches, oxi se ola.
+    # Stelnoume mono to kommeno proswpo, an den vrethei h olokliri eikona.
     if confirmed:
-        to_analyse = {
-            hit.image_url: downloaded[hit.image_url]
-            for hit in confirmed
-        }
+        to_analyse = {}
+        for hit in confirmed:
+            image_data = downloaded[hit.image_url]
+            face = face_matcher.crop_face(query_encoding, image_data)
+            to_analyse[hit.image_url] = face or image_data
         deepfake_results = await deepfake_client.analyse_batch(to_analyse)
  
         for hit in confirmed:
