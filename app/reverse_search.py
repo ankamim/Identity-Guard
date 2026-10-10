@@ -26,6 +26,8 @@ class SearchHit:
     source_url: str = ""
     title: str = ""
     engine: str = ""
+    # Apo poio kommati ths apantisis hrthe (px visual_matches, exact_matches)
+    match_type: str = ""
     #Plhroforia gia thn eikona meta to download (width, height, bytes)
     image_kind: str = "original"   # "original" | "thumbnail"
     img_width: int | None = None
@@ -122,6 +124,7 @@ def _parse_google_lens(payload: dict) -> list[SearchHit]:
                 source_url=item.get("link", ""),
                 title=item.get("title", ""),
                 engine="google_lens",
+                match_type=key,
                 image_kind="original" if has_original else "thumbnail",
             ))
     return hits
@@ -150,6 +153,7 @@ def _parse_yandex(payload: dict) -> list[SearchHit]:
                 source_url=item.get("link", "") or item.get("source", ""),
                 title=item.get("title", ""),
                 engine="yandex",
+                match_type=key,
                 image_kind="original" if has_original else "thumbnail",
             ))
     return hits

@@ -8,11 +8,17 @@ osa apotelesmata periexoun proswpo pou tairiazei me thn eikona tou xrhsth.
 
 import io
 import logging
+import sys
 import tempfile
 from pathlib import Path
 
 import numpy as np
 from PIL import Image
+
+# To DeepFace typwnei emoji molis ginei import. Sta Windows, otan to output
+# paei se arxeio, to cp1252 den ta kserei kai to programma skaei.
+sys.stdout.reconfigure(errors="replace")
+
 from deepface import DeepFace
 
 from . import config
