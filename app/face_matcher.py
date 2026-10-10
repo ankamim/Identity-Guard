@@ -19,7 +19,9 @@ from . import config
 
 logger = logging.getLogger(__name__)
 
-MODEL_NAME = "VGG-Face"
+# To VGG-Face den xexwrize kala ta idia proswpa apo ksenous kai petouse
+# ta perissotera deepfakes prin ftasoun sto DeepSafe.
+MODEL_NAME = "Facenet512"
 
 DETECTOR_BACKEND = "mtcnn"
 

@@ -26,9 +26,10 @@ MAX_RESULTS_PER_ENGINE = 40
 
 # --- Face matching ---------------------------------------------------------
 
-# Katwfli omoiotitas prosopou (cosine distance, DeepFace/VGG-Face).
-# Oso poio mikrh apostash toso poio omoiomorfo to prwsopo,typiki timi gia VGG-Face: ~0.40.
-FACE_DISTANCE_THRESHOLD = 0.45
+# Katwfli omoiotitas prosopou (cosine distance, DeepFace/Facenet512).
+# Oso poio mikrh apostash toso poio omoiomorfo to prwsopo. Me 0.60 pernane
+# ~93% twn diko mou fotografiwn kai ~91% twn deepfakes, enw ksenoi mono ~1.6%.
+FACE_DISTANCE_THRESHOLD = 0.60
 
 # Megisto megethos pixels eikonas prin to face encoding, gia taxytita.
 MAX_IMAGE_DIMENSION = 1024

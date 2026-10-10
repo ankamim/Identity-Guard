@@ -34,8 +34,8 @@ from pathlib import Path
 from app import face_matcher, reverse_search
 
 EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
-THRESHOLDS = (0.35, 0.40, 0.45, 0.50)
-RECALL_THRESHOLD = 0.45
+THRESHOLDS = (0.50, 0.55, 0.60, 0.65)
+RECALL_THRESHOLD = 0.60
 TEST_SITE = "ankamim.github.io"
 TEST_IMAGE = re.compile(r"/((?:me|df)_\d+)\.(?:jpe?g|png)", re.IGNORECASE)
 
@@ -140,7 +140,7 @@ async def run_once(path: Path, run_no: int, public_base: str | None,
 
     print(f"{name:14} run {run_no}: found={len(hits)} "
           f"downloaded={len(downloaded)} face={len(distances)} "
-          f"match@0.45={row['matches_0.45']} others={len(others)} "
+          f"match@0.60={row['matches_0.60']} others={len(others)} "
           f"({sec_search + sec_download + sec_faces:.0f} s)")
 
 
