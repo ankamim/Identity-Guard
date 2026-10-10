@@ -397,6 +397,9 @@ function render(data) {
     const conf = hit.deepfake_confidence != null
       ? `<span class="num">βεβαιότητα ${(hit.deepfake_confidence * 100).toFixed(0)}%</span>` : "";
 
+    const thumb = hit.image_kind === "thumbnail"
+      ? `<span class="num">μικρογραφία, λιγότερο αξιόπιστο</span>` : "";
+
     const link = hit.source_url || hit.image_url;
 
     return `<article class="finding ${fake ? "fake" : real ? "real" : ""}">
@@ -407,6 +410,7 @@ function render(data) {
         <div class="row">
           ${chip}
           ${conf}
+          ${thumb}
           <span class="num">ομοιότητα ${hit.similarity_percent}%</span>
           <span class="num">d=${hit.face_distance}</span>
         </div>

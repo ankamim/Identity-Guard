@@ -114,11 +114,15 @@ def _parse_google_lens(payload: dict) -> list[SearchHit]:
                          or _as_url(item.get("thumbnail")))
             if not image_url:
                 continue
+            # Ta exact_matches dinoun mono mikrografia (~225px), opou h
+            # anixneush einai ligotero axiopisti. To grafoume sthn anafora.
+            has_original = _as_url(item.get("original")) or _as_url(item.get("image"))
             hits.append(SearchHit(
                 image_url=image_url,
                 source_url=item.get("link", ""),
                 title=item.get("title", ""),
                 engine="google_lens",
+                image_kind="original" if has_original else "thumbnail",
             ))
     return hits
  
@@ -135,11 +139,13 @@ def _parse_yandex(payload: dict) -> list[SearchHit]:
                          or _as_url(item.get("thumbnail")))
             if not image_url:
                 continue
+            has_original = _as_url(item.get("original")) or _as_url(item.get("image"))
             hits.append(SearchHit(
                 image_url=image_url,
                 source_url=item.get("link", "") or item.get("source", ""),
                 title=item.get("title", ""),
                 engine="yandex",
+                image_kind="original" if has_original else "thumbnail",
             ))
     return hits
  
