@@ -68,6 +68,19 @@ make start
 μόνο το `universalfakedetect`, οπότε αρκεί και
 `docker compose up -d --build api universalfakedetect` (χωρίς `make`).
 
+Το αρχικό `universalfakedetect` δεν έχει εκπαιδευτεί σε face swaps. Το
+τελευταίο του επίπεδο ξαναεκπαιδεύτηκε σε face swaps του DeepFakeFace και σε
+πραγματικές φωτογραφίες (DeepFakeFace, FFHQ). Μετά την εκκίνηση, από τον
+φάκελο αυτού του repo:
+
+```bash
+docker cp models/fc_weights_faceswap.pth deepsafe-universalfakedetect:/app/model/universalfakedetect/pretrained_weights/fc_weights.pth
+docker restart deepsafe-universalfakedetect
+```
+
+Χρειάζεται ξανά μετά από κάθε `--build` ή αναδημιουργία του container. Το
+`DEEPSAFE_THRESHOLD` (0.24) ισχύει μόνο με αυτά τα βάρη.
+
 ### 4. Εκκίνηση
 
 ```bash
