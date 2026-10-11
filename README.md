@@ -18,6 +18,8 @@ app/
   pipeline.py         Module 4 — ενορχήστρωση
   main.py             FastAPI server
   static/index.html   διεπαφή
+models/               επανεκπαιδευμένα βάρη για το universalfakedetect
+retraining/           scripts που έφτιαξαν τα βάρη (βλ. Επανεκπαίδευση)
 ```
 
 ## Εγκατάσταση
@@ -74,7 +76,8 @@ docker restart deepsafe-universalfakedetect
 ```
 
 Χρειάζεται ξανά μετά από κάθε `--build` ή αναδημιουργία του container. Το
-`DEEPSAFE_THRESHOLD` (0.24) ισχύει μόνο με αυτά τα βάρη.
+`DEEPSAFE_THRESHOLD` (0.24) ισχύει μόνο με αυτά τα βάρη. Πώς φτιάχτηκαν: δες
+[Επανεκπαίδευση](#επανεκπαίδευση-του-universalfakedetect).
 
 ### 4. Εκκίνηση
 
@@ -83,6 +86,55 @@ uvicorn app.main:app --reload --port 8080
 ```
 
 Άνοιξε http://localhost:8080
+
+## Επανεκπαίδευση του universalfakedetect
+
+Τα βάρη `models/fc_weights_faceswap.pth` και το threshold 0.24 βγαίνουν από τα
+scripts του φακέλου `retraining/`. Ξαναεκπαιδεύεται μόνο το τελευταίο γραμμικό
+επίπεδο (768 βάρη και bias) πάνω στα CLIP ViT-L/14 features του μοντέλου. Το
+υπόλοιπο μοντέλο μένει ίδιο.
+
+Δεδομένα (δεν ανεβαίνουν στο repo λόγω μεγέθους και αδειών):
+
+- [DeepFakeFace](https://huggingface.co/datasets/OpenRL/DeepFakeFace):
+  `wiki.zip` (πραγματικές) και `insight.zip` (face swaps), αποσυμπιεσμένα σε
+  `dff/wiki` και `dff/insight`.
+- [FFHQ 512](https://huggingface.co/datasets/Ryan-sjtu/ffhq512-caption): το
+  πρώτο parquet (`train-00000-of-00054-...parquet`), ως επιπλέον πραγματικές.
+- Οι δικές μας εικόνες (`me_*` πραγματικές, `df_*` face swaps), μόνο για
+  έλεγχο στο τέλος.
+
+Βήματα, από τον φάκελο του repo, με το DeepSafe να τρέχει:
+
+```bash
+python retraining/make_crops.py crops dff own_images
+python retraining/make_crops2.py crops ffhq.parquet
+docker exec deepsafe-universalfakedetect mkdir -p /work
+docker cp crops deepsafe-universalfakedetect:/work/crops
+docker cp retraining/extract_feats.py deepsafe-universalfakedetect:/work/
+docker exec deepsafe-universalfakedetect python /work/extract_feats.py /work/crops /work/feats.npz
+docker cp deepsafe-universalfakedetect:/work/feats.npz .
+python retraining/train_fc.py feats.npz fc_faceswap.npz
+docker cp fc_faceswap.npz deepsafe-universalfakedetect:/work/
+docker cp retraining/install_fc.py deepsafe-universalfakedetect:/work/
+docker exec deepsafe-universalfakedetect python /work/install_fc.py
+docker restart deepsafe-universalfakedetect
+python retraining/verify_api.py crops feats.npz fc_faceswap.npz 0.24
+```
+
+Το `extract_feats.py` θέλει περίπου 2 ώρες σε CPU για τις ~5.300 εικόνες. Το
+`train_fc.py` διαλέγει το L2 και το threshold μόνο στο validation split
+(περισσότερα fake με το πολύ 8% πραγματικές flagged) και μετράει το test μία
+φορά στο τέλος. Η έξοδος της εκτέλεσης που έδωσε τα βάρη του repo είναι στο
+`retraining/train_fc_log.txt`:
+
+| Test (1.058 εικόνες) | Αρχικό fc @ 0.06 | Νέο fc @ 0.24 |
+|---|---|---|
+| AUC | 0.870 | 0.987 |
+| Accuracy | 81.3% | 92.9% |
+| Face swaps που πιάστηκαν | 75.3% | 95.3% |
+| Πραγματικές flagged | 15.3% | 8.5% |
+| Δικές μας εικόνες (15) | 12/15 | 15/15 |
 
 ## Παράμετροι για πειραματισμό
 

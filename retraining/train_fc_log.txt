@@ -1,0 +1,24 @@
+{'train': 3472, 'val': 759, 'test': 1058, 'own': 15}
+{'train': 3472, 'val': 759, 'test': 1058, 'own': 15, 'test_dff': 762, 'test_ffhq': 296}
+original fc, app threshold 0.06 and val-picked threshold
+  orig       val       n= 759 AUC=0.885 @ 0.060: acc=82.7% caught=77.4% (216/279) flagged=14.2% (68/480)
+  orig       test      n=1058 AUC=0.870 @ 0.060: acc=81.3% caught=75.3% (289/384) flagged=15.3% (103/674)
+  orig       test_dff  n= 762 AUC=0.857 @ 0.060: acc=78.7% caught=75.3% (289/384) flagged=17.7% (67/378)
+  orig       test_ffhq n= 296 real only: flagged=12.2% (36/296)
+  orig       own      n=  15 AUC=0.909 @ 0.060: acc=80.0% caught=75.0% (3/4) flagged=18.2% (2/11)
+  orig       val       n= 759 AUC=0.885 @ 0.166: acc=83.3% caught=68.1% (190/279) flagged=7.9% (38/480)
+  orig       test      n=1058 AUC=0.870 @ 0.166: acc=82.8% caught=65.4% (251/384) flagged=7.3% (49/674)
+  orig       test_dff  n= 762 AUC=0.857 @ 0.166: acc=78.0% caught=65.4% (251/384) flagged=9.3% (35/378)
+  orig       test_ffhq n= 296 real only: flagged=4.7% (14/296)
+  orig       own      n=  15 AUC=0.909 @ 0.166: acc=80.0% caught=75.0% (3/4) flagged=18.2% (2/11)
+lam=0.0001 val AUC=0.984 caught@<=8%=92.1% th=0.061
+lam=0.001 val AUC=0.986 caught@<=8%=93.9% th=0.087
+lam=0.01 val AUC=0.990 caught@<=8%=95.0% th=0.192
+lam=0.03 val AUC=0.990 caught@<=8%=95.3% th=0.216
+lam=0.1 val AUC=0.990 caught@<=8%=96.1% th=0.243
+chosen lam=0.1 th=0.243
+  new        val       n= 759 AUC=0.990 @ 0.243: acc=93.5% caught=96.1% (268/279) flagged=7.9% (38/480)
+  new        test      n=1058 AUC=0.987 @ 0.243: acc=92.9% caught=95.3% (366/384) flagged=8.5% (57/674)
+  new        test_dff  n= 762 AUC=0.977 @ 0.243: acc=90.2% caught=95.3% (366/384) flagged=15.1% (57/378)
+  new        test_ffhq n= 296 real only: flagged=0.0% (0/296)
+  new        own      n=  15 AUC=1.000 @ 0.243: acc=100.0% caught=100.0% (4/4) flagged=0.0% (0/11)
