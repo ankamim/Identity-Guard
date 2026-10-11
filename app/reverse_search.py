@@ -40,6 +40,8 @@ class SearchHit:
     deepfake_confidence: float | None = None
     model_results: dict = field(default_factory=dict)
     error: str | None = None
+    # To deepfake apo to opoio vrethike (stadio 7 ths pipeline)
+    traced_from: str | None = None
     
  
  
