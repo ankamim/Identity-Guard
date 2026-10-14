@@ -47,6 +47,7 @@ Identity-Guard/
 │   └── train_fc_log.txt        # Output of the run that produced models/fc_weights_faceswap.pth
 ├── compare_engines.py          # Google Lens vs Yandex contribution for one publicly hosted image
 ├── measure_search.py           # Search + face matching measurements over a folder (no DeepSafe)
+├── label_matches.html          # Local page to label measure_search hits and compute precision/recall
 ├── deepsafe_check.py           # Standalone DeepSafe test, optionally on degraded copies (--degrade)
 ├── sanity_check.py             # Sends one image straight to DeepSafe
 ├── start-identity-guard.bat    # Windows launcher for DeepSafe and the app
@@ -152,6 +153,7 @@ These are not part of the application and exercise one part of the pipeline at a
 - `deepsafe_check.py` analyses files or folders; with `--degrade` it also sends resized (512, 256, 128 px), JPEG compressed (quality 90, 70, 50) and thumbnail-like (150 px, quality 75) versions and writes all model probabilities to CSV.
 - `compare_engines.py` runs the full pipeline for a local image and its public URL, so that Yandex is searched too, and prints the confirmed findings per engine.
 - `measure_search.py` runs search, download and face distance for every result (not only matches) over a folder of images and repeated runs, and writes per hit and per run CSV files, including recall against the other experiment images. With `--crop` it searches with the cropped face instead of the whole photo.
+- `label_matches.html` is a local page for labelling the `<out>_hits.csv` of `measure_search.py`. It shows every hit with a face up to a maximum distance (0.70), sorted by distance with a dashed line at the system threshold, and each one is labelled as same person, not, or unclear. It computes TP, FP, FN, TN, precision and recall with Wilson 95% intervals for thresholds 0.35 to 0.50, keeps the labels in the browser and exports them as `labels.csv`.
 
 ## Experimental Results
 
