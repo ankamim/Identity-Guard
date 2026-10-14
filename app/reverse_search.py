@@ -26,6 +26,8 @@ class SearchHit:
     source_url: str = ""
     title: str = ""
     engine: str = ""
+    # Apo poio kommati ths apantisis hrthe (px visual_matches, exact_matches)
+    match_type: str = ""
     #Plhroforia gia thn eikona meta to download (width, height, bytes)
     image_kind: str = "original"   # "original" | "thumbnail"
     img_width: int | None = None
@@ -38,6 +40,8 @@ class SearchHit:
     deepfake_confidence: float | None = None
     model_results: dict = field(default_factory=dict)
     error: str | None = None
+    # To deepfake apo to opoio vrethike (stadio 7 ths pipeline)
+    traced_from: str | None = None
     
  
  
@@ -114,11 +118,16 @@ def _parse_google_lens(payload: dict) -> list[SearchHit]:
                          or _as_url(item.get("thumbnail")))
             if not image_url:
                 continue
+            # Ta exact_matches dinoun mono mikrografia (~225px), opou h
+            # anixneush einai ligotero axiopisti. To grafoume sthn anafora.
+            has_original = _as_url(item.get("original")) or _as_url(item.get("image"))
             hits.append(SearchHit(
                 image_url=image_url,
                 source_url=item.get("link", ""),
                 title=item.get("title", ""),
                 engine="google_lens",
+                match_type=key,
+                image_kind="original" if has_original else "thumbnail",
             ))
     return hits
  
@@ -130,16 +139,24 @@ def _parse_yandex(payload: dict) -> list[SearchHit]:
     # opote elegxoume ola ta pithana.
     for key in ("image_results", "similar_images", "organic_results"):
         for item in payload.get(key, []) or []:
-            image_url = (_as_url(item.get("original"))
+            # Sta image_results h megalh eikona einai sto "original_image".
+            # Xwris afto pairname mono th mikrografia twn ~180px.
+            original = (_as_url(item.get("original_image"))
+                        or _as_url(item.get("original")))
+            image_url = (original
                          or _as_url(item.get("image"))
                          or _as_url(item.get("thumbnail")))
             if not image_url:
                 continue
+            # To "image" twn similar_images einai ki afto mikrografia
+            has_original = original
             hits.append(SearchHit(
                 image_url=image_url,
                 source_url=item.get("link", "") or item.get("source", ""),
                 title=item.get("title", ""),
                 engine="yandex",
+                match_type=key,
+                image_kind="original" if has_original else "thumbnail",
             ))
     return hits
  
@@ -305,7 +322,11 @@ async def download_images(hits: list[SearchHit]) -> dict[str, bytes]:
             except Exception as exc:
                 hit.error = f"Apotyxia katevasmatos: {exc}"
  
-    async with httpx.AsyncClient(timeout=30.0) as client:
+    # Polla sites apantoun 403 an to aitima den moiazei me browser.
+    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                             "AppleWebKit/537.36 (KHTML, like Gecko) "
+                             "Chrome/126.0 Safari/537.36"}
+    async with httpx.AsyncClient(timeout=30.0, headers=headers) as client:
         await asyncio.gather(*(fetch(client, hit) for hit in hits))
  
     logger.info("Katevikan %d apo %d eikones", len(downloaded), len(hits))

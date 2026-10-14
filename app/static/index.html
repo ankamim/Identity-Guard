@@ -364,6 +364,7 @@ function render(data) {
   const stats = [
     ["Ευρήματα αναζήτησης", s.found_by_search, false],
     ["Ίδιο πρόσωπο", s.face_matches, false],
+    ["Εικόνες σελίδων", s.page_images, false],
     ["Πιθανώς αλλοιωμένες", s.flagged_synthetic, s.flagged_synthetic > 0],
   ].map(([k, n, alert]) => `
     <div class="stat${alert ? " alert" : ""}">
@@ -385,7 +386,26 @@ function render(data) {
     <p class="count">${f.length} εικόνες με το ίδιο πρόσωπο ·
      ολοκληρώθηκε σε ${data.duration_seconds} δευτερόλεπτα</p>`;
 
-  html += f.map(hit => {
+  // Tria kommatia: apo thn anazhthsh, apo tis idies selides, kai pou
+  // allou vrethikan ta deepfakes
+  const groups = [
+    ["Από την αντίστροφη αναζήτηση", "",
+      f.filter(h => h.engine !== "page_scan" && !h.traced_from)],
+    ["Στις ίδιες σελίδες", "Άλλες εικόνες με το πρόσωπό σου στις σελίδες των ευρημάτων.",
+      f.filter(h => h.engine === "page_scan")],
+    ["Το deepfake αναρτήθηκε και εδώ", "Σελίδες που βρέθηκαν με αναζήτηση του ίδιου του deepfake.",
+      f.filter(h => h.traced_from)],
+  ];
+  for (const [title, note, list] of groups) {
+    if (!list.length) continue;
+    html += `<h2>${title}</h2>${note ? `<p class="count">${note}</p>` : ""}`;
+    html += list.map(card).join("");
+  }
+
+  $("results").innerHTML = html;
+}
+
+function card(hit) {
     const fake = hit.deepfake_verdict === "fake";
     const real = hit.deepfake_verdict === "real";
     const chip = fake
@@ -397,6 +417,14 @@ function render(data) {
     const conf = hit.deepfake_confidence != null
       ? `<span class="num">βεβαιότητα ${(hit.deepfake_confidence * 100).toFixed(0)}%</span>` : "";
 
+    const thumb = hit.image_kind === "thumbnail"
+      ? `<span class="num">μικρογραφία, λιγότερο αξιόπιστο</span>` : "";
+
+    // Sta antigrafa h omoiothta einai ws pros to deepfake
+    const sim = hit.traced_from
+      ? `<span class="num">ομοιότητα με το deepfake ${hit.similarity_percent}%</span>`
+      : `<span class="num">ομοιότητα ${hit.similarity_percent}%</span>`;
+
     const link = hit.source_url || hit.image_url;
 
     return `<article class="finding ${fake ? "fake" : real ? "real" : ""}">
@@ -407,14 +435,12 @@ function render(data) {
         <div class="row">
           ${chip}
           ${conf}
-          <span class="num">ομοιότητα ${hit.similarity_percent}%</span>
+          ${thumb}
+          ${sim}
           <span class="num">d=${hit.face_distance}</span>
         </div>
       </div>
     </article>`;
-  }).join("");
-
-  $("results").innerHTML = html;
 }
 </script>
 </body>

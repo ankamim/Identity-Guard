@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="el">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Επισήμανση αντιστοιχιών</title>
+<!--
+Topiki selida gia ton optiko elegxo ton antistoixion tou measure_search.py.
+
+Xrisi: anoikse to arxeio ston browser kai fortose to <out>_hits.csv.
+Emfanizontai ola ta evrimata me prosopo (status=face) mexri ti megisti
+apostasi, ana eikona erotimatos, kata ayxousa apostasi, me diakekommeni
+grammi sto katofli tou systimatos. Kathe evrima episimainetai os
+"Ίδιο πρόσωπο", "Όχι" i "Δεν είναι σαφές". Oi episimanseis menoun ston
+browser (localStorage) kai exagontai se labels.csv. Oi eikones fortonoyn
+apo tis arxikes dieythinseis tous, tipota den anevainei pouthena.
+-->
+<style>
+:root{--bg:#f6f7f9;--card:#fff;--fg:#1d2330;--muted:#667085;--line:#d0d5dd;
+--yes:#12805c;--no:#c4320a;--unc:#b54708;--acc:#2f5bd3}
+@media (prefers-color-scheme:dark){:root{--bg:#14171c;--card:#1e232b;--fg:#e6e9ef;
+--muted:#98a2b3;--line:#344054;--yes:#3ccb7f;--no:#f97066;--unc:#fdb022;--acc:#7a9cff}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.45 system-ui,sans-serif}
+header{position:sticky;top:0;z-index:2;background:var(--card);border-bottom:1px solid var(--line);
+padding:10px 16px;display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center}
+header h1{font-size:16px;margin:0 8px 0 0}
+label.ctl{display:flex;gap:6px;align-items:center;color:var(--muted)}
+input[type=number]{width:70px}
+button{font:inherit;padding:5px 10px;border:1px solid var(--line);border-radius:6px;
+background:var(--card);color:var(--fg);cursor:pointer}
+main{padding:16px;max-width:1300px;margin:0 auto}
+section{margin-bottom:28px}
+h2{font-size:15px;margin:0 0 8px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:8px;overflow:hidden;
+display:flex;flex-direction:column}
+.card.yes{border-color:var(--yes);box-shadow:0 0 0 2px var(--yes) inset}
+.card.no{border-color:var(--no);box-shadow:0 0 0 2px var(--no) inset}
+.card.unclear{border-color:var(--unc);box-shadow:0 0 0 2px var(--unc) inset}
+.card img{width:100%;height:190px;object-fit:contain;background:#0001}
+.meta{padding:6px 8px;font-size:12px;color:var(--muted);word-break:break-all}
+.meta b{color:var(--fg);font-size:14px}
+.btns{display:flex;border-top:1px solid var(--line)}
+.btns button{flex:1;border:0;border-radius:0;padding:6px 2px;font-size:12px}
+.btns button.on.yes{background:var(--yes);color:#fff}
+.btns button.on.no{background:var(--no);color:#fff}
+.btns button.on.unclear{background:var(--unc);color:#fff}
+.cut{grid-column:1/-1;border-top:2px dashed var(--acc);color:var(--acc);font-size:12px;
+padding-top:2px;text-align:right}
+table{border-collapse:collapse;background:var(--card);margin-bottom:10px}
+th,td{border:1px solid var(--line);padding:4px 8px;text-align:right}
+th:first-child,td:first-child{text-align:left}
+.note{color:var(--muted);font-size:12px;max-width:900px}
+#drop{border:2px dashed var(--line);border-radius:8px;padding:40px;text-align:center;color:var(--muted)}
+</style>
+</head>
+<body>
+<header>
+  <h1>Επισήμανση αντιστοιχιών</h1>
+  <label class="ctl">CSV ευρημάτων <input type="file" id="hitsFile" accept=".csv"></label>
+  <label class="ctl">Κατώφλι συστήματος <input type="number" id="sysTh" step="0.01" value="0.45"></label>
+  <label class="ctl">Μέγιστη απόσταση <input type="number" id="maxD" step="0.05" value="0.70"></label>
+  <label class="ctl">Εικόνα <select id="imgSel"><option value="">όλες</option></select></label>
+  <label class="ctl">Εισαγωγή labels.csv <input type="file" id="labelsFile" accept=".csv"></label>
+  <button id="exportBtn">Εξαγωγή labels.csv</button>
+  <button id="clearBtn">Διαγραφή επισημάνσεων</button>
+</header>
+<main>
+  <section id="metrics"></section>
+  <div id="drop">Φόρτωσε το αρχείο &lt;out&gt;_hits.csv του measure_search.py.</div>
+  <div id="groups"></div>
+</main>
+<script>
+// Katoflia gia ta opoia ypologizontai oi metrikes (enotita 4.2 tis ergasias)
+const THRESHOLDS = [0.35, 0.40, 0.45, 0.50];
+const LABELS = {yes: "Ίδιο πρόσωπο", no: "Όχι", unclear: "Δεν είναι σαφές"};
+const STORE = "label_matches_v1";
+
+let hits = [];
+let labels = load();
+
+function load() {
+  try { return JSON.parse(localStorage.getItem(STORE)) || {}; } catch (e) { return {}; }
+}
+function save() {
+  try { localStorage.setItem(STORE, JSON.stringify(labels)); } catch (e) {}
+}
+
+// CSV parser me ypostirixi gia eisagogika kai kommata mesa sta pedia
+function parseCSV(text) {
+  const rows = []; let row = [], f = "", q = false;
+  text = text.replace(/^﻿/, "");
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (q) {
+      if (c === '"' && text[i + 1] === '"') { f += '"'; i++; }
+      else if (c === '"') q = false;
+      else f += c;
+    } else if (c === '"') q = true;
+    else if (c === ",") { row.push(f); f = ""; }
+    else if (c === "\n" || c === "\r") {
+      if (c === "\r" && text[i + 1] === "\n") i++;
+      row.push(f); rows.push(row); row = []; f = "";
+    } else f += c;
+  }
+  if (f !== "" || row.length) { row.push(f); rows.push(row); }
+  const head = rows.shift() || [];
+  return rows.filter(r => r.length > 1).map(r => Object.fromEntries(head.map((h, i) => [h, r[i] ?? ""])));
+}
+
+function csvCell(v) {
+  v = String(v ?? "");
+  return /[",\n\r]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v;
+}
+
+const key = h => h.image + "|" + h.image_url;
+
+// Kratame mono ta evrimata me prosopo, mia fora ana (eikona, url), me tin
+// mikroteri apostasi an to idio url emfanistike se polles epanalipseis
+function loadHits(rows) {
+  const best = new Map();
+  for (const r of rows) {
+    if (r.status !== "face" || r.distance === "") continue;
+    const h = {...r, distance: parseFloat(r.distance)};
+    const k = key(h);
+    if (!best.has(k) || h.distance < best.get(k).distance) best.set(k, h);
+  }
+  hits = [...best.values()].sort((a, b) => a.image.localeCompare(b.image) || a.distance - b.distance);
+  const sel = document.getElementById("imgSel");
+  sel.innerHTML = '<option value="">όλες</option>' +
+    [...new Set(hits.map(h => h.image))].map(i => `<option>${i}</option>`).join("");
+  document.getElementById("drop").style.display = hits.length ? "none" : "";
+  render();
+}
+
+function shown() {
+  const maxD = parseFloat(document.getElementById("maxD").value) || 1;
+  const img = document.getElementById("imgSel").value;
+  return hits.filter(h => h.distance <= maxD && (!img || h.image === img));
+}
+
+function render() {
+  const sysTh = parseFloat(document.getElementById("sysTh").value);
+  const groups = document.getElementById("groups");
+  groups.innerHTML = "";
+  const byImg = new Map();
+  for (const h of shown()) {
+    if (!byImg.has(h.image)) byImg.set(h.image, []);
+    byImg.get(h.image).push(h);
+  }
+  for (const [img, list] of byImg) {
+    const sec = document.createElement("section");
+    const done = list.filter(h => labels[key(h)]).length;
+    sec.innerHTML = `<h2>${img} <span class="note">(${done}/${list.length} επισημασμένα)</span></h2>`;
+    const grid = document.createElement("div");
+    grid.className = "grid";
+    let cut = false;
+    for (const h of list) {
+      if (!cut && h.distance >= sysTh) {
+        cut = true;
+        grid.insertAdjacentHTML("beforeend", `<div class="cut">κατώφλι συστήματος ${sysTh.toFixed(2)}</div>`);
+      }
+      grid.appendChild(card(h));
+    }
+    sec.appendChild(grid);
+    groups.appendChild(sec);
+  }
+  metrics();
+}
+
+function card(h) {
+  const k = key(h), cur = labels[k] || "";
+  const el = document.createElement("div");
+  el.className = "card " + cur;
+  const host = (() => { try { return new URL(h.source_url).hostname; } catch (e) { return h.source_url; } })();
+  el.innerHTML = `<a href="${h.image_url}" target="_blank" rel="noopener"><img loading="lazy" referrerpolicy="no-referrer" src="${h.image_url}" alt=""></a>
+    <div class="meta"><b>d = ${h.distance.toFixed(3)}</b> · ${h.engine}${h.match_type ? " · " + h.match_type : ""}<br>
+    <a href="${h.source_url}" target="_blank" rel="noopener">${host}</a>${h.test_image ? " · " + h.test_image : ""}</div>
+    <div class="btns">${Object.entries(LABELS).map(([v, t]) =>
+      `<button class="${v}${cur === v ? " on" : ""}" data-v="${v}">${t}</button>`).join("")}</div>`;
+  el.querySelectorAll("button").forEach(b => b.onclick = () => {
+    labels[k] = labels[k] === b.dataset.v ? undefined : b.dataset.v;
+    if (!labels[k]) delete labels[k];
+    save(); render();
+  });
+  return el;
+}
+
+// Diastima empistosynis Wilson 95% gia analogia k/n
+function wilson(k, n) {
+  if (!n) return "";
+  const z = 1.96, p = k / n, d = 1 + z * z / n;
+  const c = (p + z * z / (2 * n)) / d, m = z * Math.sqrt(p * (1 - p) / n + z * z / (4 * n * n)) / d;
+  return `[${(100 * Math.max(0, c - m)).toFixed(1)}, ${(100 * Math.min(1, c + m)).toFixed(1)}]`;
+}
+const pct = (k, n) => n ? (100 * k / n).toFixed(1) + "%" : "–";
+
+function stats(list) {
+  const s = list.map(h => h.distance).sort((a, b) => a - b);
+  if (!s.length) return "–";
+  const mean = s.reduce((a, b) => a + b, 0) / s.length;
+  return `${s.length}: ${s[0].toFixed(2)} έως ${s[s.length - 1].toFixed(2)}, μέσος ${mean.toFixed(2)}`;
+}
+
+// Thetiki klasi to "Ίδιο πρόσωπο". Ta "Δεν είναι σαφές" kai ta
+// anepisimanta den mpainoun stis metrikes.
+function metrics() {
+  const lab = shown().filter(h => labels[key(h)] === "yes" || labels[key(h)] === "no");
+  const unc = shown().filter(h => labels[key(h)] === "unclear").length;
+  const rows = THRESHOLDS.map(t => {
+    let tp = 0, fp = 0, fn = 0, tn = 0;
+    for (const h of lab) {
+      const same = labels[key(h)] === "yes", pass = h.distance < t;
+      if (same && pass) tp++; else if (!same && pass) fp++; else if (same) fn++; else tn++;
+    }
+    return `<tr><td>${t.toFixed(2)}</td><td>${tp}</td><td>${fp}</td><td>${fn}</td><td>${tn}</td>
+      <td>${pct(tp, tp + fp)}</td><td>${wilson(tp, tp + fp)}</td>
+      <td>${pct(tp, tp + fn)}</td><td>${wilson(tp, tp + fn)}</td></tr>`;
+  }).join("");
+  document.getElementById("metrics").innerHTML = hits.length ? `
+    <h2>Μετρικές φίλτρου προσώπου</h2>
+    <table><tr><th>Κατώφλι</th><th>TP</th><th>FP</th><th>FN</th><th>TN</th>
+      <th>Precision</th><th>Wilson 95%</th><th>Recall</th><th>Wilson 95%</th></tr>${rows}</table>
+    <div class="note">Αποστάσεις “Ίδιο πρόσωπο” ${stats(lab.filter(h => labels[key(h)] === "yes"))} ·
+      “Όχι” ${stats(lab.filter(h => labels[key(h)] === "no"))} · “Δεν είναι σαφές”: ${unc}.<br>
+      Οι μετρικές αφορούν μόνο τα ευρήματα που εμφανίζονται (έως τη μέγιστη απόσταση) και έχουν επισημανθεί.
+      Ευρήματα που δεν κατέβηκαν, δεν είχαν πρόσωπο ή είναι πάνω από τη μέγιστη απόσταση δεν κρίνονται.</div>` : "";
+}
+
+function exportLabels() {
+  const head = ["image", "engine", "match_type", "distance", "label", "test_image", "image_url", "source_url"];
+  const lines = [head.join(",")];
+  for (const h of hits) {
+    const l = labels[key(h)];
+    if (l) lines.push([h.image, h.engine, h.match_type, h.distance, l, h.test_image, h.image_url, h.source_url].map(csvCell).join(","));
+  }
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([lines.join("\n") + "\n"], {type: "text/csv"}));
+  a.download = "labels.csv";
+  a.click();
+}
+
+const readFile = (input, fn) => input.onchange = () => {
+  const f = input.files[0];
+  if (f) f.text().then(t => fn(parseCSV(t)));
+};
+readFile(document.getElementById("hitsFile"), loadHits);
+readFile(document.getElementById("labelsFile"), rows => {
+  for (const r of rows) if (LABELS[r.label]) labels[r.image + "|" + r.image_url] = r.label;
+  save(); render();
+});
+document.getElementById("exportBtn").onclick = exportLabels;
+document.getElementById("clearBtn").onclick = () => {
+  if (confirm("Διαγραφή όλων των επισημάνσεων;")) { labels = {}; save(); render(); }
+};
+["sysTh", "maxD", "imgSel"].forEach(id => document.getElementById(id).oninput = render);
+</script>
+</body>
+</html>

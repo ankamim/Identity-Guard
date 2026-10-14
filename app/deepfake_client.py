@@ -41,6 +41,8 @@ async def analyse_one(client: httpx.AsyncClient,
         "media_type": "image",
         "image_data": encoded,
         "ensemble_method": config.DEEPSAFE_ENSEMBLE,
+        "models": config.DEEPSAFE_MODELS,
+        "threshold": config.DEEPSAFE_THRESHOLD,
     }
 
     response = await client.post(

@@ -8,18 +8,26 @@ osa apotelesmata periexoun proswpo pou tairiazei me thn eikona tou xrhsth.
 
 import io
 import logging
+import sys
 import tempfile
 from pathlib import Path
 
 import numpy as np
 from PIL import Image
+
+# To DeepFace typwnei emoji molis ginei import. Sta Windows, otan to output
+# paei se arxeio, to cp1252 den ta kserei kai to programma skaei.
+sys.stdout.reconfigure(errors="replace")
+
 from deepface import DeepFace
 
 from . import config
 
 logger = logging.getLogger(__name__)
 
-MODEL_NAME = "VGG-Face"
+# To VGG-Face den xexwrize kala ta idia proswpa apo ksenous kai petouse
+# ta perissotera deepfakes prin ftasoun sto DeepSafe.
+MODEL_NAME = "Facenet512"
 
 DETECTOR_BACKEND = "mtcnn"
 
@@ -60,10 +68,11 @@ def _save_temp(image: Image.Image) -> str:
     return tmp.name
 
 
-def _extract_embedding(image_bytes: bytes) -> list[np.ndarray]:
+def _extract_faces(image_bytes: bytes) -> list[dict]:
     """
-    Vgazei ta embeddings olwn twn prosopwn pou vriskei to DeepFace
-    sthn eikona. Epistrefei empty list an den vrei tipota.
+    Vgazei ola ta prosopa pou vriskei to DeepFace sthn eikona, mazi me to
+    embedding kai th thesi tous (facial_area). Epistrefei empty list an den
+    vrei tipota.
 
     Xrhsimopoioume enforce_detection=True wste to idio to DeepFace na
     kanei ton elegxo kai na petaxei sfalma an den vrei proswpo,
@@ -90,7 +99,15 @@ def _extract_embedding(image_bytes: bytes) -> list[np.ndarray]:
     finally:
         Path(path).unlink(missing_ok=True)
 
-    return [np.array(item["embedding"]) for item in results]
+    return results
+
+
+def _extract_embedding(image_bytes: bytes) -> list[np.ndarray]:
+    """
+    Vgazei ta embeddings olwn twn prosopwn pou vriskei to DeepFace
+    sthn eikona. Epistrefei empty list an den vrei tipota.
+    """
+    return [np.array(item["embedding"]) for item in _extract_faces(image_bytes)]
 
 
 def encode_query_face(image_bytes: bytes) -> np.ndarray:
@@ -148,6 +165,42 @@ def compare_with_candidate(query_encoding: np.ndarray,
     is_match = best_distance < config.FACE_DISTANCE_THRESHOLD
 
     return is_match, best_distance
+
+
+def crop_face(query_encoding: np.ndarray,
+              candidate_bytes: bytes) -> bytes | None:
+    """
+    Kovei to proswpo pou moiazei perissotero me thn eikona anaforas,
+    gia na to steiloume sto DeepSafe anti gia olokliri thn eikona.
+
+    To universalfakedetect kovei mono ena 224x224 kommati apo to kentro,
+    opote se megales fwtografies den evlepe kan to proswpo. Me perithwrio
+    30% kai megethos 256x256 epiase kai ta 4 deepfakes tou test set.
+    An den vrethei proswpo, epistrefei None.
+    """
+    faces = _extract_faces(candidate_bytes)
+    if len(faces) == 0:
+        return None
+
+    best = min(faces, key=lambda item: _cosine_distance(
+        query_encoding, np.array(item["embedding"])))
+    area = best["facial_area"]
+
+    # To facial_area einai se syntetagmenes ths smikrymenis eikonas
+    image = _load_and_resize(candidate_bytes)
+    side = max(area["w"], area["h"]) * (1 + config.FACE_CROP_MARGIN)
+    center_x = area["x"] + area["w"] / 2
+    center_y = area["y"] + area["h"] / 2
+    face = image.crop((
+        int(center_x - side / 2), int(center_y - side / 2),
+        int(center_x + side / 2), int(center_y + side / 2),
+    ))
+    size = config.FACE_CROP_SIZE
+    face = face.resize((size, size), Image.Resampling.LANCZOS)
+
+    buffer = io.BytesIO()
+    face.save(buffer, format="PNG")
+    return buffer.getvalue()
 
 
 def distance_to_similarity(distance: float) -> float:

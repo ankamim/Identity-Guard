@@ -34,8 +34,8 @@ from pathlib import Path
 from app import face_matcher, reverse_search
 
 EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
-THRESHOLDS = (0.35, 0.40, 0.45, 0.50)
-RECALL_THRESHOLD = 0.45
+THRESHOLDS = (0.50, 0.55, 0.60, 0.65)
+RECALL_THRESHOLD = 0.60
 TEST_SITE = "ankamim.github.io"
 TEST_IMAGE = re.compile(r"/((?:me|df)_\d+)\.(?:jpe?g|png)", re.IGNORECASE)
 
@@ -65,7 +65,7 @@ def open_csv(path: str, fields: list[str]):
     return fh, writer
 
 
-async def run_once(path: Path, run_no: int, public_base: str | None,
+async def run_once(path: Path, run_no: int, public_base: str | None, crop: bool,
                    hits_w, runs_w, hits_fh, runs_fh) -> None:
     name = path.name
     stem = path.stem.lower()
@@ -77,10 +77,16 @@ async def run_once(path: Path, run_no: int, public_base: str | None,
         print(f"{name} run {run_no}: apotyxia encoding ({exc})")
         return
 
+    # Me --crop stelnoume sthn anazhthsh mono to kommeno proswpo, wste
+    # h mixani na sygkrinei to proswpo kai oxi ruxa kai fonto.
+    search_bytes = image_bytes
+    if crop:
+        search_bytes = face_matcher.crop_face(query, image_bytes) or image_bytes
+
     public_url = (public_base.rstrip("/") + "/" + name) if public_base else None
 
     t0 = time.time()
-    hits = await reverse_search.search(image_bytes, name, public_url)
+    hits = await reverse_search.search(search_bytes, name, public_url)
     sec_search = time.time() - t0
 
     t0 = time.time()
@@ -140,7 +146,7 @@ async def run_once(path: Path, run_no: int, public_base: str | None,
 
     print(f"{name:14} run {run_no}: found={len(hits)} "
           f"downloaded={len(downloaded)} face={len(distances)} "
-          f"match@0.45={row['matches_0.45']} others={len(others)} "
+          f"match@0.60={row['matches_0.60']} others={len(others)} "
           f"({sec_search + sec_download + sec_faces:.0f} s)")
 
 
@@ -157,7 +163,7 @@ async def main(args) -> None:
     try:
         for path in images:
             for run_no in range(1, args.runs + 1):
-                await run_once(path, run_no, args.public_base,
+                await run_once(path, run_no, args.public_base, args.crop,
                                hits_w, runs_w, hits_fh, runs_fh)
     finally:
         hits_fh.close()
@@ -175,6 +181,8 @@ if __name__ == "__main__":
                         help="prothema arxeion CSV")
     parser.add_argument("--public-base", default=None,
                         help="dimosio base URL (px GitHub Pages) gia to Yandex")
+    parser.add_argument("--crop", action="store_true",
+                        help="anazhthsh me to kommeno proswpo anti gia olh thn eikona")
     parser.add_argument("--limit", type=int, default=0,
                         help="mono oi prwtes N eikones (gia dokimi)")
     cli = parser.parse_args()
