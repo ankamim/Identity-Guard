@@ -67,8 +67,9 @@ h1 {
 .drop strong { color: var(--ink); font-weight: 500; }
 .drop small { display: block; margin-top: 8px; color: var(--ink-faint); font-size: 13px; }
 
-.preview { display: none; align-items: center; gap: 18px; }
+.preview { display: none; align-items: center; gap: 18px; flex-wrap: wrap; }
 .preview.on { display: flex; }
+.preview .thumbs { display: flex; flex-wrap: wrap; gap: 8px; }
 .preview img {
   width: 96px; height: 96px; object-fit: cover;
   border: 1px solid var(--rule);
@@ -202,29 +203,30 @@ footer {
 
   <h1>Έλεγχος ψηφιακής ταυτότητας</h1>
   <p class="standfirst">
-    Ανέβασε μία φωτογραφία σου. Το σύστημα ψάχνει δημόσια προσβάσιμες πηγές
+    Ανέβασε έως πέντε φωτογραφίες σου. Το σύστημα ψάχνει δημόσια προσβάσιμες πηγές
     για εικόνες με το ίδιο πρόσωπο και ελέγχει αν κάποια από αυτές φέρει
-    ίχνη ψηφιακής αλλοίωσης.
+    ίχνη ψηφιακής αλλοίωσης. Περισσότερες και διαφορετικές φωτογραφίες
+    βρίσκουν περισσότερες σελίδες, αλλά ο έλεγχος διαρκεί περισσότερο.
   </p>
 
   <div id="notices"></div>
 
   <div class="panel">
     <div class="drop" id="drop" tabindex="0" role="button"
-         aria-label="Επιλογή φωτογραφίας">
-      <p><strong>Σύρε μια φωτογραφία εδώ</strong> ή πάτα για επιλογή</p>
-      <small>JPEG, PNG ή WebP · ένα πρόσωπο, έως 10 MB</small>
+         aria-label="Επιλογή φωτογραφιών">
+      <p><strong>Σύρε μία έως πέντε φωτογραφίες εδώ</strong> ή πάτα για επιλογή</p>
+      <small>JPEG, PNG ή WebP · ένα πρόσωπο ανά φωτογραφία, έως 10 MB η καθεμία</small>
     </div>
 
     <div class="preview" id="preview">
-      <img id="thumb" alt="Η φωτογραφία που επέλεξες">
+      <div class="thumbs" id="thumbs"></div>
       <div class="meta">
         <span class="name" id="fname"></span>
         <span class="size" id="fsize"></span>
       </div>
     </div>
 
-    <input type="file" id="picker" accept="image/jpeg,image/png,image/webp" hidden>
+    <input type="file" id="picker" accept="image/jpeg,image/png,image/webp" multiple hidden>
 
     <div class="actions">
       <button id="go" disabled>Έναρξη ελέγχου</button>
@@ -253,7 +255,8 @@ footer {
 
 <script>
 const $ = id => document.getElementById(id);
-let chosen = null;
+let chosen = [];
+const MAX_IMAGES = 5;
 let timers = [];
 
 function notice(text, kind) {
@@ -274,16 +277,29 @@ fetch("/api/status").then(r => r.json()).then(s => {
 }).catch(() => {});
 
 // --- epilogi arxeiou ---
-function accept(file) {
-  if (!file) return;
-  if (!file.type.startsWith("image/")) {
+function accept(files) {
+  files = [...files];
+  if (!files.length) return;
+  if (files.some(file => !file.type.startsWith("image/"))) {
     notice("Δεκτά είναι μόνο αρχεία εικόνας.");
     return;
   }
-  chosen = file;
-  $("thumb").src = URL.createObjectURL(file);
-  $("fname").textContent = file.name;
-  $("fsize").textContent = (file.size / 1024).toFixed(0) + " KB";
+  if (files.length > MAX_IMAGES) {
+    notice(`Έως ${MAX_IMAGES} φωτογραφίες. Κρατήθηκαν οι πρώτες ${MAX_IMAGES}.`, "warn");
+    files = files.slice(0, MAX_IMAGES);
+  }
+  chosen = files;
+  $("thumbs").innerHTML = "";
+  for (const file of files) {
+    const img = document.createElement("img");
+    img.src = URL.createObjectURL(file);
+    img.alt = file.name;
+    $("thumbs").appendChild(img);
+  }
+  const kb = files.reduce((sum, file) => sum + file.size, 0) / 1024;
+  $("fname").textContent = files.length === 1
+    ? files[0].name : `${files.length} φωτογραφίες`;
+  $("fsize").textContent = kb.toFixed(0) + " KB";
   $("drop").hidden = true;
   $("preview").classList.add("on");
   $("go").disabled = false;
@@ -293,7 +309,7 @@ $("drop").onclick = () => $("picker").click();
 $("drop").onkeydown = e => {
   if (e.key === "Enter" || e.key === " ") { e.preventDefault(); $("picker").click(); }
 };
-$("picker").onchange = e => accept(e.target.files[0]);
+$("picker").onchange = e => accept(e.target.files);
 
 ["dragenter", "dragover"].forEach(ev =>
   $("drop").addEventListener(ev, e => {
@@ -303,7 +319,7 @@ $("picker").onchange = e => accept(e.target.files[0]);
   $("drop").addEventListener(ev, e => {
     e.preventDefault(); $("drop").classList.remove("over");
   }));
-$("drop").addEventListener("drop", e => accept(e.dataTransfer.files[0]));
+$("drop").addEventListener("drop", e => accept(e.dataTransfer.files));
 
 // --- vimata proodou ---
 function stepTo(n) {
@@ -333,7 +349,7 @@ $("go").onclick = async () => {
   fakeProgress();
 
   const form = new FormData();
-  form.append("file", chosen);
+  chosen.forEach(file => form.append("files", file));
 
   try {
     const res = await fetch("/api/analyse", { method: "POST", body: form });
@@ -362,6 +378,7 @@ function render(data) {
   const f = data.findings;
 
   const stats = [
+    ["Φωτογραφίες αναφοράς", s.query_images, false],
     ["Ευρήματα αναζήτησης", s.found_by_search, false],
     ["Ίδιο πρόσωπο", s.face_matches, false],
     ["Εικόνες σελίδων", s.page_images, false],
