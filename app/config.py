@@ -31,6 +31,13 @@ MAX_RESULTS_PER_ENGINE = 40
 # ~93% twn diko mou fotografiwn kai ~91% twn deepfakes, enw ksenoi mono ~1.6%.
 FACE_DISTANCE_THRESHOLD = 0.60
 
+# Katwfli otan o xrhsths anevasei perissoteres fwtografies. Edw h apostash
+# einai o mesos oros apo oles, opote xreiazetai pio afstiro orio.
+FACE_MULTI_REF_THRESHOLD = 0.50
+
+# Megistos arithmos fwtografiwn anaforas. Kathe mia kostizei 2 anazhthseis.
+MAX_QUERY_IMAGES = 5
+
 # Megisto megethos pixels eikonas prin to face encoding, gia taxytita.
 MAX_IMAGE_DIMENSION = 1024
 

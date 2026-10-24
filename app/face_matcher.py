@@ -144,10 +144,37 @@ def _cosine_distance(a: np.ndarray, b: np.ndarray) -> float:
     return 1.0 - similarity
 
 
-def compare_with_candidate(query_encoding: np.ndarray,
+def _as_refs(query_encoding) -> list[np.ndarray]:
+    """Ena encoding h lista apo encodings (mia ana fwtografia anaforas)."""
+    if isinstance(query_encoding, np.ndarray) and query_encoding.ndim == 1:
+        return [query_encoding]
+    return list(query_encoding)
+
+
+def reference_distance(query_encoding, embedding: np.ndarray) -> float:
+    """
+    Apostash enos proswpou apo tis fwtografies anaforas.
+
+    Me mia fwtografia einai h apostash ths. Me perissoteres pairnoume to
+    meso oro, giati enas ksenos pou moiazei se mia fwtografia spania
+    moiazei kai stis alles. Me 4 fwtografies kai katwfli 0.50 ta lookalikes
+    tou Yandex epesan apo 15/18 se 7/18 kai pernousan akoma ola ta deepfakes.
+    """
+    refs = _as_refs(query_encoding)
+    return float(np.mean([_cosine_distance(ref, embedding) for ref in refs]))
+
+
+def match_threshold(query_encoding) -> float:
+    """To katwfli analoga me to plhthos twn fwtografiwn anaforas."""
+    if len(_as_refs(query_encoding)) > 1:
+        return config.FACE_MULTI_REF_THRESHOLD
+    return config.FACE_DISTANCE_THRESHOLD
+
+
+def compare_with_candidate(query_encoding,
                            candidate_bytes: bytes) -> tuple[bool, float | None]:
     """
-    Sygkrinei thn eikona anaforas me ena apotelesma ths anazhtishs.
+    Sygkrinei tis eikones anaforas me ena apotelesma ths anazhtishs.
 
     Epistrefei (einai_match, apostasi).
     An h ypopsifia eikona den exei proswwpo, epistrefei (False, None).
@@ -160,14 +187,14 @@ def compare_with_candidate(query_encoding: np.ndarray,
     if len(embeddings) == 0:
         return False, None
 
-    distances = [_cosine_distance(query_encoding, e) for e in embeddings]
+    distances = [reference_distance(query_encoding, e) for e in embeddings]
     best_distance = min(distances)
-    is_match = best_distance < config.FACE_DISTANCE_THRESHOLD
+    is_match = best_distance < match_threshold(query_encoding)
 
     return is_match, best_distance
 
 
-def crop_face(query_encoding: np.ndarray,
+def crop_face(query_encoding,
               candidate_bytes: bytes) -> bytes | None:
     """
     Kovei to proswpo pou moiazei perissotero me thn eikona anaforas,
@@ -182,7 +209,7 @@ def crop_face(query_encoding: np.ndarray,
     if len(faces) == 0:
         return None
 
-    best = min(faces, key=lambda item: _cosine_distance(
+    best = min(faces, key=lambda item: reference_distance(
         query_encoding, np.array(item["embedding"])))
     area = best["facial_area"]
 
