@@ -42,6 +42,8 @@ class SearchHit:
     error: str | None = None
     # To deepfake apo to opoio vrethike (stadio 7 ths pipeline)
     traced_from: str | None = None
+    # Apo poia fwtografia tou xrhsth vrethike (1 = h prwth)
+    query_image: int = 1
     
  
  

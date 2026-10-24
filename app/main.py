@@ -49,30 +49,40 @@ async def status() -> dict:
         "serpapi_configured": bool(config.SERPAPI_KEY),
         "deepsafe_available": await deepfake_client.check_health(),
         "face_threshold": config.FACE_DISTANCE_THRESHOLD,
+        "max_images": config.MAX_QUERY_IMAGES,
         "engines": config.SEARCH_ENGINES,
     }
 
 
 @app.post("/api/analyse")
-async def analyse(file: UploadFile = File(...)) -> dict:
-    """Dexetai mia fotografia kai epistrefei thn anafora."""
+async def analyse(files: list[UploadFile] = File(...)) -> dict:
+    """Dexetai mexri 5 fotografies tou idiou atomou kai epistrefei thn anafora."""
 
-    if file.content_type not in ALLOWED_TYPES:
+    if len(files) > config.MAX_QUERY_IMAGES:
         raise HTTPException(
             status_code=400,
-            detail="Dekta formats: JPEG, PNG, WebP.",
+            detail=f"Mexri {config.MAX_QUERY_IMAGES} fwtografies.",
         )
 
-    image_bytes = await file.read()
+    images = []
+    for file in files:
+        if file.content_type not in ALLOWED_TYPES:
+            raise HTTPException(
+                status_code=400,
+                detail="Dekta formats: JPEG, PNG, WebP.",
+            )
 
-    if len(image_bytes) > MAX_UPLOAD_BYTES:
-        raise HTTPException(
-            status_code=400,
-            detail="H eikona einai megalyteri apo 10 MB.",
-        )
+        image_bytes = await file.read()
+
+        if len(image_bytes) > MAX_UPLOAD_BYTES:
+            raise HTTPException(
+                status_code=400,
+                detail="H eikona einai megalyteri apo 10 MB.",
+            )
+        images.append((image_bytes, file.filename or "query.jpg"))
 
     try:
-        return await pipeline.run(image_bytes, file.filename or "query.jpg")
+        return await pipeline.run(images)
 
     except face_matcher.NoFaceFoundError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc

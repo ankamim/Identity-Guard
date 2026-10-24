@@ -22,10 +22,14 @@ from . import config, deepfake_client, face_matcher, page_scan, reverse_search
 logger = logging.getLogger(__name__)
 
 
-async def run(image_bytes: bytes, filename: str,
+async def run(images: list[tuple[bytes, str]],
               public_image_url: str | None = None) -> dict:
     """
-    Trexei oli tin analysi gia mia eikona.
+    Trexei oli tin analysi gia mia h perissoteres fwtografies tou xrhsth.
+
+    images: lista apo (bytes, onoma arxeiou), mexri MAX_QUERY_IMAGES.
+    Kathe fwtografia psaxnetai xexwrista, giati to Lens vriskei selides
+    me thn idia h paromoia eikona kai oxi me to idio proswpo.
 
     public_image_url: an dothei, xrisimopoieitai gia na
     psaxtei kai sto Yandex, pou apaitei dimosio URL anti gia upload.
@@ -34,6 +38,7 @@ async def run(image_bytes: bytes, filename: str,
     """
     started = time.time()
     stats = {
+        "query_images": len(images),
         "found_by_search": 0,
         "downloaded": 0,
         "contain_a_face": 0,
@@ -44,13 +49,28 @@ async def run(image_bytes: bytes, filename: str,
         "flagged_synthetic": 0,
     }
 
-    # --- Stadio 1: encoding ths eikonas anaforas -------------------------
+    # --- Stadio 1: encoding twn eikonwn anaforas -------------------------
     # Afto ginetai prwta. An apotyxei, den exei noima na psaxoume.
-    query_encoding = face_matcher.encode_query_face(image_bytes)
-    logger.info("Etoimo to encoding ths eikonas anaforas")
+    query_encoding = [face_matcher.encode_query_face(image_bytes)
+                      for image_bytes, _ in images]
+    if len(query_encoding) == 1:
+        query_encoding = query_encoding[0]
+    logger.info("Etoima ta encodings %d eikonwn anaforas", len(images))
 
     # --- Stadio 2: reverse image search ----------------------------------
-    hits = await reverse_search.search(image_bytes, filename, public_image_url)
+    # Mia anazhthsh ana fwtografia, kai enwnoume ta apotelesmata xwris
+    # diplotypa. To Yandex thelei dimosio URL, opote mono gia thn prwth.
+    hits = []
+    seen = set()
+    for number, (image_bytes, filename) in enumerate(images):
+        image_hits = await reverse_search.search(
+            image_bytes, filename, public_image_url if number == 0 else None)
+        for hit in image_hits:
+            if hit.image_url in seen:
+                continue
+            seen.add(hit.image_url)
+            hit.query_image = number + 1
+            hits.append(hit)
     stats["found_by_search"] = len(hits)
 
     if not hits:
@@ -146,7 +166,7 @@ async def _trace_deepfake(fake, downloaded: dict, known: set,
     if not faces:
         return []
     # An exei polla proswpa, pairnoume afto pou moiazei me ton xrhsth
-    fake_face = min(faces, key=lambda item: face_matcher._cosine_distance(
+    fake_face = min(faces, key=lambda item: face_matcher.reference_distance(
         query_encoding, np.array(item["embedding"])))
     fake_encoding = np.array(fake_face["embedding"])
 
