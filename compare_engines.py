@@ -28,7 +28,7 @@ logging.getLogger("httpx").setLevel(logging.WARNING)
 
 async def main(path: str, public_url: str) -> None:
     image_bytes = Path(path).read_bytes()
-    report = await pipeline.run(image_bytes, Path(path).name, public_url)
+    report = await pipeline.run([(image_bytes, Path(path).name)], public_url)
 
     by_engine = Counter(f["engine"] for f in report["findings"])
 

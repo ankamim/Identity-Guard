@@ -31,6 +31,20 @@ MAX_RESULTS_PER_ENGINE = 40
 # ~93% twn diko mou fotografiwn kai ~91% twn deepfakes, enw ksenoi mono ~1.6%.
 FACE_DISTANCE_THRESHOLD = 0.60
 
+# Katwfli otan o xrhsths anevasei perissoteres fwtografies. Edw h apostash
+# einai o mesos oros apo oles, opote xreiazetai pio afstiro orio.
+# Ta deepfakes ta vriskei h sarwsh selidwn me th kontinoteri fwtografia,
+# opote edw mporoume na eimaste afstiroi: me 0.45 epesan ta lookalikes.
+FACE_MULTI_REF_THRESHOLD = 0.45
+
+# Katwfli gia ta apotelesmata tou entopismou deepfake. Psaxnoume antigrafa
+# tou idiou deepfake, pou exoun sxedon to idio proswpo. Me 0.60 pernousan
+# 33 ksenoi (0.34 ews 0.60) kai to DeepSafe evgale 12 apo aftous fake.
+TRACE_COPY_THRESHOLD = 0.25
+
+# Megistos arithmos fwtografiwn anaforas. Kathe mia kostizei 2 anazhthseis.
+MAX_QUERY_IMAGES = 5
+
 # Megisto megethos pixels eikonas prin to face encoding, gia taxytita.
 MAX_IMAGE_DIMENSION = 1024
 
