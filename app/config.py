@@ -33,7 +33,9 @@ FACE_DISTANCE_THRESHOLD = 0.60
 
 # Katwfli otan o xrhsths anevasei perissoteres fwtografies. Edw h apostash
 # einai o mesos oros apo oles, opote xreiazetai pio afstiro orio.
-FACE_MULTI_REF_THRESHOLD = 0.50
+# Ta deepfakes ta vriskei h sarwsh selidwn me th kontinoteri fwtografia,
+# opote edw mporoume na eimaste afstiroi: me 0.45 epesan ta lookalikes.
+FACE_MULTI_REF_THRESHOLD = 0.45
 
 # Katwfli gia ta apotelesmata tou entopismou deepfake. Psaxnoume antigrafa
 # tou idiou deepfake, pou exoun sxedon to idio proswpo. Me 0.60 pernousan
