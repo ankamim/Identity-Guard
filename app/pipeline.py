@@ -97,7 +97,8 @@ async def run(images: list[tuple[bytes, str]],
         downloaded.update(page_downloaded)
         known.update(hit.image_url for hit in page_hits)
         confirmed += _filter_faces(page_hits, page_downloaded, query_encoding,
-                                   stats, min_side=config.PAGE_SCAN_MIN_SIDE)
+                                   stats, min_side=config.PAGE_SCAN_MIN_SIDE,
+                                   closest=True)
 
     # --- Stadio 6: deepfake detection ------------------------------------
     # Trexei mono panw sta epivevaiomena matches, oxi se ola.
@@ -192,7 +193,8 @@ async def _trace_deepfake(fake, downloaded: dict, known: set,
 
 
 def _filter_faces(hits: list, downloaded: dict, query_encoding,
-                  stats: dict, min_side: int = 0) -> list:
+                  stats: dict, min_side: int = 0,
+                  closest: bool = False) -> list:
     """Kratame osa apotelesmata exoun to idio proswpo me to encoding."""
     confirmed = []
     for hit in hits:
@@ -212,7 +214,7 @@ def _filter_faces(hits: list, downloaded: dict, query_encoding,
             continue
 
         is_match, distance = face_matcher.compare_with_candidate(
-            query_encoding, image_data
+            query_encoding, image_data, closest=closest
         )
 
         if distance is not None:

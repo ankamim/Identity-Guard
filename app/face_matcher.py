@@ -171,8 +171,21 @@ def match_threshold(query_encoding) -> float:
     return config.FACE_DISTANCE_THRESHOLD
 
 
+def closest_distance(query_encoding, embedding: np.ndarray) -> float:
+    """
+    Apostash apo th fwtografia anaforas pou moiazei perissotero.
+
+    Gia tis eikones ths sarwshs selidwn. Ena deepfake ftiaxnetai apo mia
+    fwtografia, opote moiazei poli se aftin kai ligotero stis alles. Me
+    ton meso oro to df_3 eftase 0.52 kai den perase.
+    """
+    return float(min(_cosine_distance(ref, embedding)
+                     for ref in _as_refs(query_encoding)))
+
+
 def compare_with_candidate(query_encoding,
-                           candidate_bytes: bytes) -> tuple[bool, float | None]:
+                           candidate_bytes: bytes,
+                           closest: bool = False) -> tuple[bool, float | None]:
     """
     Sygkrinei tis eikones anaforas me ena apotelesma ths anazhtishs.
 
@@ -187,9 +200,14 @@ def compare_with_candidate(query_encoding,
     if len(embeddings) == 0:
         return False, None
 
-    distances = [reference_distance(query_encoding, e) for e in embeddings]
+    if closest:
+        distances = [closest_distance(query_encoding, e) for e in embeddings]
+        threshold = config.FACE_DISTANCE_THRESHOLD
+    else:
+        distances = [reference_distance(query_encoding, e) for e in embeddings]
+        threshold = match_threshold(query_encoding)
     best_distance = min(distances)
-    is_match = best_distance < match_threshold(query_encoding)
+    is_match = best_distance < threshold
 
     return is_match, best_distance
 
