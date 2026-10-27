@@ -35,6 +35,11 @@ FACE_DISTANCE_THRESHOLD = 0.60
 # einai o mesos oros apo oles, opote xreiazetai pio afstiro orio.
 FACE_MULTI_REF_THRESHOLD = 0.50
 
+# Katwfli gia ta apotelesmata tou entopismou deepfake. Psaxnoume antigrafa
+# tou idiou deepfake, pou exoun sxedon to idio proswpo. Me 0.60 pernousan
+# 33 ksenoi (0.34 ews 0.60) kai to DeepSafe evgale 12 apo aftous fake.
+TRACE_COPY_THRESHOLD = 0.25
+
 # Megistos arithmos fwtografiwn anaforas. Kathe mia kostizei 2 anazhthseis.
 MAX_QUERY_IMAGES = 5
 

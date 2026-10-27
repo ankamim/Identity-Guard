@@ -187,6 +187,9 @@ async def _trace_deepfake(fake, downloaded: dict, known: set,
     stats["trace_results"] += len(trace_downloaded)
 
     traced = _filter_faces(hits, trace_downloaded, fake_encoding, stats)
+    # Kratame mono ta antigrafa, oxi osous apla moiazoun
+    traced = [hit for hit in traced
+              if hit.face_distance < config.TRACE_COPY_THRESHOLD]
     logger.info("To deepfake %s vrethike se %d akomh eikones",
                fake.image_url[:60], len(traced))
     return traced
